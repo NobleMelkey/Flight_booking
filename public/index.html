@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flight Booking System</title>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background: linear-gradient(to right, #4facfe, #00f2fe);
+            font-family: Arial, sans-serif;
+            color: #333;
+        }
+        .container {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(10px);
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+            max-width: 500px;
+            width: 100%;
+        }
+        h1, h2 {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        form {
+            display: flex;
+            flex-direction: column;
+        }
+        label {
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input {
+            margin-bottom: 15px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+        button {
+            padding: 12px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #218838;
+        }
+        ul {
+            list-style-type: none;
+            padding: 0;
+        }
+        li {
+            background: #e9ecef;
+            margin: 5px 0;
+            padding: 10px;
+            border-radius: 5px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Flight Booking System</h1>
+        <div>
+            <h2>Create Booking</h2>
+            <form id="bookingForm">
+                <label for="flightNumber">Flight Number:</label>
+                <input type="text" id="flightNumber" name="flightNumber" required>
+                <label for="passengerName">Passenger Name:</label>
+                <input type="text" id="passengerName" name="passengerName" required>
+                <label for="departureDate">Departure Date:</label>
+                <input type="date" id="departureDate" name="departureDate" required>
+                <label for="seatNumber">Seat Number:</label>
+                <input type="text" id="seatNumber" name="seatNumber" required>
+                <button type="submit">Create Booking</button>
+            </form>
+        </div>
+        <div>
+            <h2>Bookings</h2>
+            <ul id="bookingsList"></ul>
+        </div>
+    </div>
+    <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const socket = io();
+            const bookingForm = document.getElementById('bookingForm');
+            const bookingsList = document.getElementById('bookingsList');
+
+            bookingForm.addEventListener('submit', async (event) => {
+                event.preventDefault();
+                const formData = new FormData(bookingForm);
+                const bookingData = {
+                    flightNumber: formData.get('flightNumber'),
+                    passengerName: formData.get('passengerName'),
+                    departureDate: new Date(formData.get('departureDate')),
+                    seatNumber: formData.get('seatNumber'),
+                };
+
+                try {
+                    const response = await fetch('/bookings', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(bookingData),
+                    });
+
+                    if (response.ok) {
+                        const newBooking = await response.json();
+                        addBookingToList(newBooking);
+                    } else {
+                        console.error('Failed to create booking');
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                }
+            });
+
+            const fetchBookings = async () => {
+                try {
+                    const response = await fetch('/bookings');
+                    const bookings = await response.json();
+                    bookingsList.innerHTML = '';
+                    bookings.forEach(addBookingToList);
+                } catch (error) {
+                    console.error('Error fetching bookings:', error);
+                }
+            };
+
+            const addBookingToList = (booking) => {
+                const listItem = document.createElement('li');
+                listItem.textContent = `${booking.flightNumber} - ${booking.passengerName} - ${booking.departureDate.toLocaleDateString()} - ${booking.seatNumber}`;
+                bookingsList.appendChild(listItem);
+            };
+
+            socket.on('bookingCreated', (newBooking) => {
+                addBookingToList(newBooking);
+            });
+
+            fetchBookings();
+        });
+    </script>
+</body>
+</html>
